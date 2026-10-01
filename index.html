@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mesa de Fuerzas VR - Balcón Realista</title>
+    <style>
+        #panel-control {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(20, 20, 40, 0.9);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            width: 280px;
+            border: 1px solid rgba(255,255,255,0.1);
+            z-index: 100;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        #panel-control h3 {
+            margin: 0 0 15px 0;
+            text-align: center;
+            font-size: 16px;
+            color: #4facfe;
+        }
+        .fuerza-control {
+            background: rgba(255,255,255,0.05);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .fuerza-control h4 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+        }
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        .slider-row .label {
+            font-size: 11px;
+            color: #a0aec0;
+            width: 45px;
+        }
+        .slider-row input[type="range"] {
+            flex: 1;
+            height: 4px;
+            -webkit-appearance: none;
+            background: rgba(255,255,255,0.15);
+            border-radius: 4px;
+            outline: none;
+        }
+        .slider-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #4facfe;
+            cursor: pointer;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        .slider-row .valor {
+            font-size: 12px;
+            font-weight: 700;
+            width: 45px;
+            text-align: right;
+            color: #4facfe;
+            font-family: 'Courier New', monospace;
+        }
+        #estado {
+            text-align: center;
+            padding: 8px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.05);
+            margin-top: 10px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        #estado.equilibrio {
+            color: #68d391;
+            border: 1px solid rgba(104, 211, 145, 0.3);
+        }
+        #estado.desequilibrio {
+            color: #fc8181;
+            border: 1px solid rgba(252, 129, 129, 0.3);
+        }
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background: rgba(0,0,0,0.6);
+            padding: 10px;
+            border-radius: 8px;
+            z-index: 100;
+        }
+        .botones-accion {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .btn-accion {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-guardar {
+            background: linear-gradient(135deg, #43e97b, #38f9d7);
+            color: #0f0c29;
+        }
+        .btn-guardar:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(67, 233, 123, 0.4);
+        }
+        .btn-informe {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            color: #0f0c29;
+        }
+        .btn-informe:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(79, 172, 254, 0.4);
+        }
+        #lista-configuraciones {
+            margin-top: 12px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        #lista-configuraciones h4 {
+            margin: 0 0 8px 0;
+            font-size: 13px;
+            color: #a0aec0;
+        }
+        #lista-config {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 11px;
+        }
+        #lista-config li {
+            padding: 5px 8px;
+            margin-bottom: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            color: #e2e8f0;
+            border-left: 3px solid #43e97b;
+        }
+        #lista-config li.vacio {
+            color: #718096;
+            font-style: italic;
+            border-left: 3px solid #4a5568;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h2>🔬 Mesa de Fuerzas VR</h2>
+        <p>Balcón de apartamento - Piso 15</p>
+    </div>
+
+    <div id="panel-control">
+        <h3>🎮 Control de Fuerzas</h3>
+        <div class="fuerza-control">
+            <h4 style="color:#ff4444;">🔴 F1</h4>
+            <div class="slider-row">
+                <span class="label">Ángulo:</span>
+                <input type="range" id="angulo1" min="0" max="360" value="30">
+                <span class="valor" id="angulo1-valor">30°</span>
+            </div>
+            <div class="slider-row">
+                <span class="label">Masa:</span>
+                <input type="range" id="masa1" min="0" max="500" value="100">
+                <span class="valor" id="masa1-valor">100g</span>
+            </div>
+        </div>
+        <div class="fuerza-control">
+            <h4 style="color:#44ff44;">🟢 F2</h4>
+            <div class="slider-row">
+                <span class="label">Ángulo:</span>
+                <input type="range" id="angulo2" min="0" max="360" value="330">
+                <span class="valor" id="angulo2-valor">330°</span>
+            </div>
+            <div class="slider-row">
+                <span class="label">Masa:</span>
+                <input type="range" id="masa2" min="0" max="500" value="100">
+                <span class="valor" id="masa2-valor">100g</span>
+            </div>
+        </div>
+        <div class="fuerza-control">
+            <h4 style="color:#4444ff;">🔵 F3</h4>
+            <div class="slider-row">
+                <span class="label">Ángulo:</span>
+                <input type="range" id="angulo3" min="0" max="360" value="180">
+                <span class="valor" id="angulo3-valor">180°</span>
+            </div>
+            <div class="slider-row">
+                <span class="label">Masa:</span>
+                <input type="range" id="masa3" min="0" max="500" value="173">
+                <span class="valor" id="masa3-valor">173g</span>
+            </div>
+        </div>
+        <div class="botones-accion">
+            <button id="btn-guardar" class="btn-accion btn-guardar">💾 Guardar</button>
+            <button id="btn-generar-informe" class="btn-accion btn-informe">📄 Informe</button>
+        </div>
+        <div id="lista-configuraciones">
+            <h4>📋 Configuraciones guardadas</h4>
+            <ul id="lista-config">
+                <li class="vacio">No hay configuraciones guardadas</li>
+            </ul>
+        </div>
+        <div id="estado">
+            <span id="estado-texto">❌ Desequilibrio</span>
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+            "docx": "https://unpkg.com/docx@8.5.0/build/index.mjs"
+        }
+    }
+    </script>
+
+    <script type="module" src="main.js"></script>
+</body>
+</html>
