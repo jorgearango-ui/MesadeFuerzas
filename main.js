@@ -16,11 +16,14 @@ import { SonidoAmbiente } from './sonido.js';
 // ============================================================
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 3000);
-camera.position.set(-1, ALTURA_PISO + 1.7, -1);
+
+// ✅ CORREGIDO: cámara de escritorio dentro del balcón (z=5, frente a la mesa)
+camera.position.set(0, ALTURA_PISO + 1.7, 5.0);
 
 // Rig VR: en VR la cámara se mueve relativa a este grupo
 const rig = new THREE.Group();
-rig.position.set(-1, ALTURA_PISO, -1);   // pies del usuario en el balcón
+// ✅ CORREGIDO: pies del usuario dentro del balcón (centro del balcón, z=5)
+rig.position.set(0, ALTURA_PISO, 5.0);
 scene.add(rig);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });

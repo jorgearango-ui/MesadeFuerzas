@@ -30,7 +30,7 @@ export class Escenario {
         this.tiempo = 0;
 
         scene.background = crearTexturaCielo();
-        scene.fog = new THREE.FogExp2(0xB0D0F0, 0.0035);
+        scene.fog = new THREE.FogExp2(0xB0D0F0, 0.0025);
 
         this._crearIluminacion();
         this._crearEdificioConPH();
@@ -281,8 +281,10 @@ export class Escenario {
         segInf.position.set(0, baseY + alturaZocalo / 2, centroZ + fondo / 2);
         grupo.add(segInf);
 
-        // ------------------------------------------------------------
-        // VENTANAL CORREDIZO (vidrio entre apartamento y balcón)
+         // ------------------------------------------------------------
+        // VENTANAL CORREDIZO — CON PUERTA ABIERTA
+        // Hoja izquierda cerrada (vidrio), hoja derecha deslizada
+        // El hueco queda libre para pasar al balcón
         // ------------------------------------------------------------
         const vidrioMat = new THREE.MeshPhysicalMaterial({
             color: 0xAADDFF,
@@ -294,36 +296,46 @@ export class Escenario {
             ior: 1.5,
             thickness: 0.05
         });
-        const ventanal = new THREE.Mesh(
-            new THREE.PlaneGeometry(anchoHueco, altoHueco - alturaZocalo),
-            vidrioMat
-        );
-        ventanal.position.set(0, baseY + (altoHueco + alturaZocalo) / 2, centroZ + fondo / 2);
-        grupo.add(ventanal);
-
-        // Marco del ventanal (delgado)
         const marcoMat = new THREE.MeshStandardMaterial({
             color: 0x1A1A1A, metalness: 0.8, roughness: 0.3
         });
 
-        // Travesaños verticales del ventanal
-        for (let i = -1; i <= 1; i++) {
-            const travesaño = new THREE.Mesh(
-                new THREE.BoxGeometry(0.04, altoHueco - alturaZocalo, 0.06),
-                marcoMat
-            );
-            travesaño.position.set(i * 1.5, baseY + (altoHueco + alturaZocalo) / 2, centroZ + fondo / 2);
-            grupo.add(travesaño);
-        }
+        // Ancho total del hueco: anchoHueco = 5. Lo dividimos en 2 hojas de 2.5
+        const anchoHoja = anchoHueco / 2;
 
-        // Travesaño horizontal central
-        const travesañoH = new THREE.Mesh(
-            new THREE.BoxGeometry(anchoHueco, 0.04, 0.06),
+        // Hoja IZQUIERDA (cerrada, con vidrio) — cubre desde x=-2.5 hasta x=0
+        const ventanaIzq = new THREE.Mesh(
+            new THREE.PlaneGeometry(anchoHoja, altoHueco - alturaZocalo),
+            vidrioMat
+        );
+        ventanaIzq.position.set(
+            -anchoHueco / 4,
+            baseY + (altoHueco + alturaZocalo) / 2,
+            centroZ + fondo / 2
+        );
+        grupo.add(ventanaIzq);
+
+        // Hoja DERECHA (deslizada hacia la izquierda, superpuesta a la hoja izquierda)
+        // Representa la "puerta abierta": se ve el marco pero el hueco está libre
+        const ventanaDer = new THREE.Mesh(
+            new THREE.PlaneGeometry(anchoHoja, altoHueco - alturaZocalo),
+            vidrioMat
+        );
+        // Deslizada completamente a la izquierda: superpuesta a la hoja izquierda
+        ventanaDer.position.set(
+            -anchoHueco / 4,
+            baseY + (altoHueco + alturaZocalo) / 2,
+            centroZ + fondo / 2 + 0.05 // Ligeramente desplazada en z para que no parpadee
+        );
+        grupo.add(ventanaDer);
+
+        // Riel inferior (guía de la puerta corrediza)
+        const rielInferior = new THREE.Mesh(
+            new THREE.BoxGeometry(anchoHueco + 0.2, 0.03, 0.08),
             marcoMat
         );
-        travesañoH.position.set(0, baseY + altoHueco * 0.5, centroZ + fondo / 2);
-        grupo.add(travesañoH);
-
+        rielInferior.position.set(0, baseY + 0.05, centroZ + fondo / 2);
+        grupo.add(rielInferior);
         // ------------------------------------------------------------
         // ILUMINACIÓN INTERIOR (lámpara de techo)
         // ------------------------------------------------------------
@@ -723,9 +735,65 @@ export class Escenario {
         }
 
         // ------------------------------------------------------------
+        // MESA FÍSICA DEL BALCÓN (donde se apoyará la mesa de fuerzas)
+        // Ubicada en el centro del balcón, ligeramente hacia adelante
+        // ------------------------------------------------------------
+        this._crearMesaFisicaBalcon(grupo, baseY, centroZ - 0.5);
+
+        // ------------------------------------------------------------
         // DETALLES DEL BALCÓN: macetas en las esquinas + silla
         // ------------------------------------------------------------
         this._crearDetallesBalconNuevo(grupo, baseY, centroZ, anchoBalcon, profundidadBalcon);
+    }
+
+    // ============================================================
+    // MESA FÍSICA DEL BALCÓN
+    // ============================================================
+    _crearMesaFisicaBalcon(grupo, baseY, zMesa) {
+        const texturaMaderaOscura = crearTexturaMaderaOscura();
+        const superficieMat = new THREE.MeshStandardMaterial({
+            map: texturaMaderaOscura, roughness: 0.5, metalness: 0.15
+        });
+
+        // Superficie (2 x 1.4 m)
+        const superficie = new THREE.Mesh(
+            new THREE.BoxGeometry(2, 0.08, 1.4),
+            superficieMat
+        );
+        superficie.position.set(0, baseY + 0.8, zMesa);
+        superficie.castShadow = true;
+        superficie.receiveShadow = true;
+        grupo.add(superficie);
+
+        const pataMat = new THREE.MeshStandardMaterial({
+            color: 0x3A1F0A, roughness: 0.6, metalness: 0.2
+        });
+
+        // 4 patas
+        const posicionesPatas = [
+            [-0.9, -0.6], [0.9, -0.6], [-0.9, 0.6], [0.9, 0.6]
+        ];
+        posicionesPatas.forEach(pos => {
+            const pata = new THREE.Mesh(
+                new THREE.BoxGeometry(0.08, 0.8, 0.08),
+                pataMat
+            );
+            pata.position.set(pos[0], baseY + 0.4, zMesa + pos[1]);
+            pata.castShadow = true;
+            pata.receiveShadow = true;
+            grupo.add(pata);
+        });
+
+        // Travesaños
+        for (let lado = -1; lado <= 1; lado += 2) {
+            const travesaño = new THREE.Mesh(
+                new THREE.BoxGeometry(1.8, 0.05, 0.05),
+                pataMat
+            );
+            travesaño.position.set(0, baseY + 0.4, zMesa + lado * 0.6);
+            travesaño.castShadow = true;
+            grupo.add(travesaño);
+        }
     }
 
     // ============================================================
@@ -797,86 +865,142 @@ export class Escenario {
         }
     }
 
-    // ============================================================
-    // CALLE PRINCIPAL Y CRUCE
+   // ============================================================
+    // CALLE PRINCIPAL Y CRUCE — DISEÑO URBANO COHERENTE
     // ============================================================
     _crearCalle() {
         const grupo = new THREE.Group();
 
+        // ------------------------------------------------------------
+        // SUELO URBANO: base grande para que toda la ciudad se apoye
+        // ------------------------------------------------------------
+        const texturaAsfaltoBase = crearTexturaAsfalto();
+        const sueloUrbanoMat = new THREE.MeshStandardMaterial({
+            map: texturaAsfaltoBase,
+            color: 0x9A9A9A,  // Gris claro (antes era muy oscuro)
+            roughness: 0.95,
+            metalness: 0.05
+        });
+        const sueloUrbano = new THREE.Mesh(
+            new THREE.PlaneGeometry(600, 600),
+            sueloUrbanoMat
+        );
+        sueloUrbano.rotation.x = -Math.PI / 2;
+        sueloUrbano.position.set(0, -0.05, 0);
+        sueloUrbano.receiveShadow = true;
+        grupo.add(sueloUrbano);
+
+        // ------------------------------------------------------------
+        // CALLE PRINCIPAL (eje Z, al frente del PH)
+        // Centrada en z=25, largo 400 (llega hasta la niebla), ancho 24
+        // Va desde z=-175 hasta z=225
+        // ------------------------------------------------------------
         const texturaAsfalto = crearTexturaAsfalto();
         const calleMat = new THREE.MeshStandardMaterial({
             map: texturaAsfalto, roughness: 0.85, metalness: 0.1
         });
 
-        // Calle principal (eje Z)
         const callePrincipal = new THREE.Mesh(
-            new THREE.PlaneGeometry(24, 200),
+            new THREE.PlaneGeometry(24, 400),
             calleMat
         );
         callePrincipal.rotation.x = -Math.PI / 2;
-        callePrincipal.position.set(0, 0.01, 20);
+        callePrincipal.position.set(0, 0.01, 25);
         callePrincipal.receiveShadow = true;
         grupo.add(callePrincipal);
 
-        // Calle perpendicular (eje X)
+        // ------------------------------------------------------------
+        // CALLE PERPENDICULAR (cruce, eje X)
+        // Centrada en z=30, largo 400, ancho 20
+        // ------------------------------------------------------------
         const callePerp = new THREE.Mesh(
-            new THREE.PlaneGeometry(200, 20),
+            new THREE.PlaneGeometry(400, 20),
             calleMat
         );
         callePerp.rotation.x = -Math.PI / 2;
-        callePerp.position.set(0, 0.01, 40);
+        callePerp.position.set(0, 0.01, 30);
         callePerp.receiveShadow = true;
         grupo.add(callePerp);
 
-        // Aceras
+        // ------------------------------------------------------------
+        // ACERAS (a los lados de la calle principal)
+        // ------------------------------------------------------------
         const texturaAcera = crearTexturaAcera();
         const aceraMat = new THREE.MeshStandardMaterial({
             map: texturaAcera, roughness: 0.95, metalness: 0.05
         });
 
         const aceraIzq = new THREE.Mesh(
-            new THREE.PlaneGeometry(8, 200),
+            new THREE.PlaneGeometry(8, 400),
             aceraMat
         );
         aceraIzq.rotation.x = -Math.PI / 2;
-        aceraIzq.position.set(-16, 0.15, 20);
+        aceraIzq.position.set(-16, 0.02, 25);
         aceraIzq.receiveShadow = true;
         grupo.add(aceraIzq);
 
         const aceraDer = new THREE.Mesh(
-            new THREE.PlaneGeometry(8, 200),
+            new THREE.PlaneGeometry(8, 400),
             aceraMat
         );
         aceraDer.rotation.x = -Math.PI / 2;
-        aceraDer.position.set(16, 0.15, 20);
+        aceraDer.position.set(16, 0.02, 25);
         aceraDer.receiveShadow = true;
         grupo.add(aceraDer);
 
-        // Bordillos
+        // Aceras laterales del cruce
+        const aceraCruceArriba = new THREE.Mesh(
+            new THREE.PlaneGeometry(400, 6),
+            aceraMat
+        );
+        aceraCruceArriba.rotation.x = -Math.PI / 2;
+        aceraCruceArriba.position.set(0, 0.02, 17);
+        aceraCruceArriba.receiveShadow = true;
+        grupo.add(aceraCruceArriba);
+
+        const aceraCruceAbajo = new THREE.Mesh(
+            new THREE.PlaneGeometry(400, 6),
+            aceraMat
+        );
+        aceraCruceAbajo.rotation.x = -Math.PI / 2;
+        aceraCruceAbajo.position.set(0, 0.02, 43);
+        aceraCruceAbajo.receiveShadow = true;
+        grupo.add(aceraCruceAbajo);
+
+        // ------------------------------------------------------------
+        // BORDILLOS
+        // ------------------------------------------------------------
         const bordilloMat = new THREE.MeshStandardMaterial({
             color: 0xCCCCCC, roughness: 0.9, metalness: 0.05
         });
 
         const bordilloIzq = new THREE.Mesh(
-            new THREE.BoxGeometry(0.3, 0.3, 200),
+            new THREE.BoxGeometry(0.3, 0.3, 400),
             bordilloMat
         );
-        bordilloIzq.position.set(-12, 0.15, 20);
+        bordilloIzq.position.set(-12, 0.15, 25);
+        bordilloIzq.castShadow = true;
+        bordilloIzq.receiveShadow = true;
         grupo.add(bordilloIzq);
 
         const bordilloDer = new THREE.Mesh(
-            new THREE.BoxGeometry(0.3, 0.3, 200),
+            new THREE.BoxGeometry(0.3, 0.3, 400),
             bordilloMat
         );
-        bordilloDer.position.set(12, 0.15, 20);
+        bordilloDer.position.set(12, 0.15, 25);
+        bordilloDer.castShadow = true;
+        bordilloDer.receiveShadow = true;
         grupo.add(bordilloDer);
 
-        // Líneas viales
+        // ------------------------------------------------------------
+        // LÍNEAS VIALES
+        // ------------------------------------------------------------
         const lineaMat = new THREE.MeshStandardMaterial({
             color: 0xFFD700, roughness: 0.8, transparent: true, opacity: 0.85
         });
 
-        for (let z = -80; z < 120; z += 4) {
+        // Línea central doble (calle principal)
+        for (let z = -170; z < 220; z += 4) {
             const linea1 = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 2.5), lineaMat);
             linea1.rotation.x = -Math.PI / 2;
             linea1.position.set(-0.3, 0.02, z);
@@ -888,8 +1012,9 @@ export class Escenario {
             grupo.add(linea2);
         }
 
+        // Líneas discontinuas de carril (calle principal)
         for (let lado = -1; lado <= 1; lado += 2) {
-            for (let z = -80; z < 120; z += 5) {
+            for (let z = -170; z < 220; z += 5) {
                 const linea = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 1.8), lineaMat);
                 linea.rotation.x = -Math.PI / 2;
                 linea.position.set(lado * 5.5, 0.02, z);
@@ -897,14 +1022,40 @@ export class Escenario {
             }
         }
 
-        // Paso de cebra en el cruce
-        for (let i = 0; i < 8; i++) {
+        // Líneas centrales del cruce (eje X)
+        for (let x = -195; x < 195; x += 4) {
+            const linea = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 0.15), lineaMat);
+            linea.rotation.x = -Math.PI / 2;
+            linea.position.set(x, 0.02, 30);
+            grupo.add(linea);
+        }
+
+        // ------------------------------------------------------------
+        // PASO DE CEBRA
+        // ------------------------------------------------------------
+        const cebraMat = new THREE.MeshStandardMaterial({
+            color: 0xFFFFFF, roughness: 0.7
+        });
+
+        // Cebra arriba del cruce
+        for (let i = 0; i < 6; i++) {
             const cebra = new THREE.Mesh(
                 new THREE.PlaneGeometry(0.6, 3),
-                new THREE.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.7 })
+                cebraMat
             );
             cebra.rotation.x = -Math.PI / 2;
-            cebra.position.set(-10 + i * 2.8, 0.03, 30);
+            cebra.position.set(-8 + i * 2.8, 0.03, 21);
+            grupo.add(cebra);
+        }
+
+        // Cebra abajo del cruce
+        for (let i = 0; i < 6; i++) {
+            const cebra = new THREE.Mesh(
+                new THREE.PlaneGeometry(0.6, 3),
+                cebraMat
+            );
+            cebra.rotation.x = -Math.PI / 2;
+            cebra.position.set(-8 + i * 2.8, 0.03, 39);
             grupo.add(cebra);
         }
 
@@ -912,8 +1063,8 @@ export class Escenario {
         this.grupoCalle = grupo;
     }
 
-    // ============================================================
-    // CIUDAD EN CUADRÍCULA
+     // ============================================================
+    // CIUDAD EN CUADRÍCULA — SIN ATRAVESAR CALLES NI EL PH
     // ============================================================
     _crearCiudadEnCuadricula() {
         const grupo = new THREE.Group();
@@ -924,29 +1075,49 @@ export class Escenario {
             '#D3D3D3', '#C0C0C0', '#B0C4DE', '#708090'
         ];
 
-        const tamanoManzana = 20;
+        const tamanoManzana = 30;
         const anchoCalle = 20;
-        const paso = tamanoManzana + anchoCalle;
-        const rangoManzanas = 4;
+        const paso = tamanoManzana + anchoCalle;  // 50 m
+
+        const rangoManzanas = 6;
 
         for (let mz = -rangoManzanas; mz <= rangoManzanas; mz++) {
             for (let mx = -rangoManzanas; mx <= rangoManzanas; mx++) {
-                if (Math.abs(mx) <= 1 && Math.abs(mz) <= 1) continue;
-
                 const centroX = mx * paso;
                 const centroZ = mz * paso;
-                const edificiosPorManzana = 3 + Math.floor(Math.random() * 2);
+
+                // ------------------------------------------------------------
+                // FILTROS DE EXCLUSIÓN
+                // ------------------------------------------------------------
+                // 1. Zona del PH (edificio principal + alrededores)
+                if (Math.abs(centroX) < 30 && Math.abs(centroZ) < 30) continue;
+
+                // 2. Calle principal (z = 25, ancho 24) + aceras + margen
+                //    Excluir toda la franja: z entre -5 y 55
+                if (centroZ > -5 && centroZ < 55) continue;
+
+                // 3. Calle perpendicular (z = 30, ancho 20) + aceras + margen
+                //    Ya cubierta por el filtro 2.
+
+                // 4. Calle perpendicular en el eje X: no hay límite, se extiende
+                //    hasta donde llegue el suelo urbano.
+
+                // 5. No generar manzanas muy lejanas (para no saturar)
+                if (Math.abs(centroX) > 250) continue;
+                if (Math.abs(centroZ) > 250) continue;
+
+                const edificiosPorManzana = 2 + Math.floor(Math.random() * 2);
 
                 for (let e = 0; e < edificiosPorManzana; e++) {
-                    const ancho = 5 + Math.random() * 4;
-                    const profundidad = 5 + Math.random() * 4;
-                    const altura = 15 + Math.random() * 45;
+                    const ancho = 6 + Math.random() * 5;
+                    const profundidad = 6 + Math.random() * 5;
+                    const altura = 20 + Math.random() * 50;
 
-                    const offsetX = (Math.random() - 0.5) * (tamanoManzana - ancho - 2);
-                    const offsetZ = (Math.random() - 0.5) * (tamanoManzana - profundidad - 2);
+                    const offsetX = (Math.random() - 0.5) * (tamanoManzana - ancho - 4);
+                    const offsetZ = (Math.random() - 0.5) * (tamanoManzana - profundidad - 4);
 
-                    const numVentanasX = Math.max(2, Math.floor(ancho / 1.5));
-                    const numVentanasY = Math.max(4, Math.floor(altura / 3));
+                    const numVentanasX = Math.max(3, Math.floor(ancho / 1.5));
+                    const numVentanasY = Math.max(6, Math.floor(altura / 3));
                     const colorBase = coloresEdificios[Math.floor(Math.random() * coloresEdificios.length)];
 
                     const texturaFachada = crearTexturaFachada(colorBase, numVentanasX, numVentanasY);
@@ -985,15 +1156,20 @@ export class Escenario {
 
         this.scene.add(grupo);
     }
-
+ // ============================================================
+    // DETALLES DE AZOTEA (barandilla, antenas, tanques)
+    // ============================================================
     _crearDetallesAzotea(grupo, x, altura, z, ancho, profundidad) {
+        // Barandilla de la azotea (marco delgado)
         const barandillaMat = new THREE.MeshStandardMaterial({
             color: 0x555555, metalness: 0.6, roughness: 0.5
         });
 
+        // Marco delgado alrededor de la azotea
         const grosor = 0.15;
         const alturaBarandilla = 0.5;
 
+        // 4 lados
         const lados = [
             { w: ancho, d: grosor, dx: 0, dz: -profundidad / 2 + grosor / 2 },
             { w: ancho, d: grosor, dx: 0, dz: profundidad / 2 - grosor / 2 },
@@ -1010,6 +1186,7 @@ export class Escenario {
             grupo.add(barra);
         });
 
+        // Ocasionalmente un tanque de agua o antena
         if (Math.random() < 0.4) {
             const tanque = new THREE.Mesh(
                 new THREE.CylinderGeometry(0.8, 0.8, 1.5, 12),
@@ -1037,7 +1214,6 @@ export class Escenario {
             grupo.add(antena);
         }
     }
-
     // ============================================================
     // AMBIENTE (árboles, farolas, bancas)
     // ============================================================
@@ -1340,8 +1516,8 @@ export class Escenario {
             { x: 7.5, direccion: -1, velocidadBase: 7 }
         ];
 
-        const zMin = -80;
-        const zMax = 120;
+        const zMin = -170;
+        const zMax = 220;
 
         for (let i = 0; i < 36; i++) {
             const carril = carriles[i % 4];
@@ -1367,13 +1543,14 @@ export class Escenario {
             this.autos.push(auto);
         }
 
+       // Carriles dentro de la calle perpendicular (z entre 20 y 40)
         const carrilesCruce = [
-            { z: 34, direccion: 1, velocidadBase: 5 },
-            { z: 46, direccion: -1, velocidadBase: 5 }
+            { z: 26, direccion: 1, velocidadBase: 5 },
+            { z: 34, direccion: -1, velocidadBase: 5 }
         ];
 
-        const xMin = -80;
-        const xMax = 80;
+        const xMin = -170;
+        const xMax = 220;
 
         for (let i = 0; i < 8; i++) {
             const carril = carrilesCruce[i % 2];
