@@ -16,7 +16,12 @@ import { SonidoAmbiente } from './sonido.js';
 // ============================================================
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 3000);
-camera.position.set(0, ALTURA_PISO + 1.7, -2);
+camera.position.set(-1, ALTURA_PISO + 1.7, -1);
+
+// Rig VR: en VR la cámara se mueve relativa a este grupo
+const rig = new THREE.Group();
+rig.position.set(-1, ALTURA_PISO, -1);   // pies del usuario en el balcón
+scene.add(rig);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -29,7 +34,7 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.set(0, ALTURA_PISO + 0.9, 6);
+controls.target.set(0, ALTURA_PISO + 0.9, 6.5);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 
@@ -63,7 +68,7 @@ const mesa = new THREE.Mesh(
     new THREE.CylinderGeometry(0.5, 0.5, 0.05, 64),
     [materialLateral, materialTapaSuperior, materialTapaInferior]
 );
-mesa.position.set(0, ALTURA_PISO + 0.85, 1);
+mesa.position.set(0, ALTURA_PISO + 0.89, 5.5);
 mesa.rotation.y = -Math.PI / 2;
 mesa.castShadow = true;
 mesa.receiveShadow = true;
@@ -91,7 +96,7 @@ for (let i = 0; i < 3; i++) {
     punta.castShadow = true;
     flechaGroup.add(punta);
 
-    flechaGroup.position.set(0, ALTURA_PISO + 0.9, 1);
+    flechaGroup.position.set(0, ALTURA_PISO + 0.94, 5.5);
     flechaGroup.rotation.y = [30, 330, 180][i] * Math.PI / 180;
 
     scene.add(flechaGroup);
@@ -106,7 +111,7 @@ const burbujaMaterial = new THREE.MeshStandardMaterial({
     emissive: 0x00ff00, emissiveIntensity: 0.2
 });
 const burbuja = new THREE.Mesh(new THREE.SphereGeometry(0.04, 32, 32), burbujaMaterial);
-burbuja.position.set(0, ALTURA_PISO + 0.95, 1);
+burbuja.position.set(0, ALTURA_PISO + 0.99, 5.5);
 burbuja.castShadow = true;
 scene.add(burbuja);
 
@@ -114,9 +119,9 @@ scene.add(burbuja);
 // SLIDERS 3D
 // ============================================================
 const sliders3D = [];
-const alturaSliders = ALTURA_PISO + 1.8;
+const alturaSliders = ALTURA_PISO + 1.3;
 
-function crearSlider3D(posX, posY, posZ, nombre, min, max, valorInicial, color) {
+function crearSlider3D(posX, posY, posZ, nombre, min, max, valorInicial, color, rotY) {
     const sliderGroup = new THREE.Group();
 
     const riel = new THREE.Mesh(
@@ -165,22 +170,45 @@ function crearSlider3D(posX, posY, posZ, nombre, min, max, valorInicial, color) 
     };
 
     sliderGroup.position.set(posX, posY, posZ);
+    sliderGroup.rotation.y = rotY || 0;
     scene.add(sliderGroup);
     sliders3D.push(sliderGroup);
     return sliderGroup;
 }
 
-crearSlider3D(3.85, alturaSliders + 0.9, 6, 'angulo1', 0, 360, 30, 0xff4444);
-crearSlider3D(3.85, alturaSliders + 0.75, 6, 'masa1', 0, 500, 100, 0xff8888);
-crearSlider3D(3.85, alturaSliders + 0.5, 6, 'angulo2', 0, 360, 330, 0x44ff44);
-crearSlider3D(3.85, alturaSliders + 0.35, 6, 'masa2', 0, 500, 100, 0x88ff88);
-crearSlider3D(3.85, alturaSliders + 0.1, 6, 'angulo3', 0, 360, 180, 0x4444ff);
-crearSlider3D(3.85, alturaSliders - 0.05, 6, 'masa3', 0, 500, 173, 0x8888ff);
+// Sliders pegados a la pared derecha del balcón (x = 3.85, z = 6)
+// Rotados -90° sobre Y para que el riel quede en el plano de la pared
+// ============================================================
+// PANEL DE MADERA EN LA PARED DERECHA DEL BALCÓN
+// Sirve como superficie de montaje para los sliders 3D
+// ============================================================
+const panelMat = new THREE.MeshStandardMaterial({
+    color: 0x4A2F1A,
+    roughness: 0.6,
+    metalness: 0.15
+});
 
+const panelSliders = new THREE.Mesh(
+    new THREE.BoxGeometry(0.12, 2.4, 1.2),
+    panelMat
+);
+// Sobresale de la pared derecha (x=4) hacia el centro del balcón (hacia -x)
+panelSliders.position.set(3.9, ALTURA_PISO + 1.3, 6);
+panelSliders.castShadow = true;
+panelSliders.receiveShadow = true;
+scene.add(panelSliders);
+const ROT_PARED_DERECHA = -Math.PI / 2;
+// Los sliders van pegados al panel de madera (x = 3.83 es el frente del panel)
+crearSlider3D(3.83, alturaSliders + 0.9, 6, 'angulo1', 0, 360, 30, 0xff4444, ROT_PARED_DERECHA);
+crearSlider3D(3.83, alturaSliders + 0.75, 6, 'masa1', 0, 500, 100, 0xff8888, ROT_PARED_DERECHA);
+crearSlider3D(3.83, alturaSliders + 0.5, 6, 'angulo2', 0, 360, 330, 0x44ff44, ROT_PARED_DERECHA);
+crearSlider3D(3.83, alturaSliders + 0.35, 6, 'masa2', 0, 500, 100, 0x88ff88, ROT_PARED_DERECHA);
+crearSlider3D(3.83, alturaSliders + 0.1, 6, 'angulo3', 0, 360, 180, 0x4444ff, ROT_PARED_DERECHA);
+crearSlider3D(3.83, alturaSliders - 0.05, 6, 'masa3', 0, 500, 173, 0x8888ff, ROT_PARED_DERECHA);
 // ============================================================
 // ETIQUETAS
 // ============================================================
-function crearEtiqueta(texto, posX, posY, posZ, color) {
+function crearEtiqueta(texto, posX, posY, posZ, color, rotY) {
     const canvas = document.createElement('canvas');
     canvas.width = 256;
     canvas.height = 128;
@@ -199,12 +227,13 @@ function crearEtiqueta(texto, posX, posY, posZ, color) {
         new THREE.MeshBasicMaterial({ map: textura, transparent: true, side: THREE.DoubleSide })
     );
     etiqueta.position.set(posX, posY, posZ);
+    etiqueta.rotation.y = rotY || 0;
     scene.add(etiqueta);
 }
 
-crearEtiqueta('F1', 3.85, alturaSliders + 1.05, 6, '#ff4444');
-crearEtiqueta('F2', 3.85, alturaSliders + 0.65, 6, '#44ff44');
-crearEtiqueta('F3', 3.85, alturaSliders + 0.25, 6, '#4444ff');
+crearEtiqueta('F1', 3.83, alturaSliders + 1.05, 6, '#ff4444', ROT_PARED_DERECHA);
+crearEtiqueta('F2', 3.83, alturaSliders + 0.65, 6, '#44ff44', ROT_PARED_DERECHA);
+crearEtiqueta('F3', 3.83, alturaSliders + 0.25, 6, '#4444ff', ROT_PARED_DERECHA);
 
 // ============================================================
 // BOTONES 3D
@@ -251,10 +280,10 @@ function crearBoton3D(texto, posX, posY, posZ, colorFondo, colorTexto, accion) {
     return botonGroup;
 }
 
-const botonGuardar3D = crearBoton3D('GUARDAR', 3.85, alturaSliders - 0.4, 6, 0x43e97b, '#0f0c29', 'guardar');
+const botonGuardar3D = crearBoton3D('GUARDAR', 3.83, alturaSliders - 0.45, 6.3, 0x43e97b, '#0f0c29', 'guardar');
 botonGuardar3D.rotation.y = -Math.PI / 2;
 
-const botonInforme3D = crearBoton3D('INFORME', 3.85, alturaSliders - 0.65, 6, 0x4facfe, '#0f0c29', 'informe');
+const botonInforme3D = crearBoton3D('INFORME', 3.83, alturaSliders - 0.7, 6.3, 0x4facfe, '#0f0c29', 'informe');
 botonInforme3D.rotation.y = -Math.PI / 2;
 
 // ============================================================
@@ -277,7 +306,7 @@ const controller2 = renderer.xr.getController(1);
         new THREE.LineBasicMaterial({ color: 0x00ffff })
     );
     c.add(laser);
-    scene.add(c);
+    rig.add(c);   // antes: scene.add(c);
 });
 
 // ============================================================
@@ -331,14 +360,26 @@ controller2.addEventListener('selectend', onSelectEnd);
 // ============================================================
 // ✅ ACTIVAR SONIDO AUTOMÁTICAMENTE AL ENTRAR EN VR
 // ============================================================
+const posCamaraEscritorio = camera.position.clone();
+
 renderer.xr.addEventListener('sessionstart', () => {
     console.log('🥽 Sesión VR iniciada — activando sonido ambiente');
     sonido.iniciar();
+
+    controls.enabled = false;          // OrbitControls no debe pelear con el visor
+    rig.add(camera);                   // la cámara pasa a ser hija del rig
+    camera.position.set(0, 0, 0);      // el visor aporta la altura real del usuario
+    camera.quaternion.identity();
 });
 
 renderer.xr.addEventListener('sessionend', () => {
     console.log('🥽 Sesión VR terminada');
     sonido.silenciar();
+
+    scene.add(camera);                 // vuelve a la vista de escritorio
+    camera.position.copy(posCamaraEscritorio);
+    controls.enabled = true;
+    controls.update();
 });
 
 // También activar sonido si el usuario hace clic (PC, sin VR)
@@ -381,7 +422,7 @@ function actualizarFlechas() {
 
     const desplazamientoMax = 0.3;
     burbuja.position.x = resultante.x * desplazamientoMax;
-    burbuja.position.z = resultante.z * desplazamientoMax + 1;
+    burbuja.position.z = resultante.z * desplazamientoMax + 5.5;
 
     if (magnitud < 0.1) {
         burbuja.material.color.setHex(0x00ff00);
@@ -586,7 +627,9 @@ function animate() {
             slider.worldToLocal(posControlador);
 
             const rango = slider.userData.max - slider.userData.min;
-            let porcentaje = (posControlador.x / 0.6) + 0.5;
+            // Si el slider está rotado -90° sobre Y, la perilla se mueve en el eje Z local
+            const ejeLocal = (slider.rotation.y !== 0) ? posControlador.z : posControlador.x;
+            let porcentaje = (ejeLocal / 0.6) + 0.5;
             porcentaje = Math.max(0, Math.min(1, porcentaje));
 
             const nuevoValor = slider.userData.min + porcentaje * rango;
